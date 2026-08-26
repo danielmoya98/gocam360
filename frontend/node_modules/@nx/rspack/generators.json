@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "name": "rspack",
+  "version": "0.0.1",
+  "generators": {
+    "configuration": {
+      "factory": "./dist/src/generators/configuration/configuration",
+      "schema": "./dist/src/generators/configuration/schema.json",
+      "description": "Rspack configuration generator."
+    },
+    "init": {
+      "factory": "./dist/src/generators/init/init",
+      "schema": "./dist/src/generators/init/schema.json",
+      "description": "Rspack init generator.",
+      "hidden": true
+    },
+    "convert-webpack": {
+      "aliases": ["convert-to-rspack"],
+      "factory": "./dist/src/generators/convert-webpack/convert-webpack",
+      "schema": "./dist/src/generators/convert-webpack/schema.json",
+      "description": "Convert a webpack application to use rspack."
+    },
+    "convert-config-to-rspack-plugin": {
+      "factory": "./dist/src/generators/convert-config-to-rspack-plugin/convert-config-to-rspack-plugin",
+      "schema": "./dist/src/generators/convert-config-to-rspack-plugin/schema.json",
+      "description": "Convert the project to use the `NxAppRspackPlugin` and `NxReactRspackPlugin`."
+    },
+    "convert-to-inferred": {
+      "factory": "./dist/src/generators/convert-to-inferred/convert-to-inferred#convertToInferred",
+      "schema": "./dist/src/generators/convert-to-inferred/schema.json",
+      "description": "Convert existing Rspack project(s) using `@nx/rspack:rspack` executor to use `@nx/rspack/plugin`."
+    }
+  }
+}

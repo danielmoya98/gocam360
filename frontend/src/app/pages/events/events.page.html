@@ -1,0 +1,836 @@
+<div class="space-y-4 pb-4 md:pb-1 md:h-full md:flex md:flex-col md:min-h-0 md:overflow-hidden">
+  
+  <!-- Standardized Page Title Header -->
+  <app-page-header
+    title="Gestión de Eventos 360°"
+    subtitle="Supervisa transmisiones en directo, captura de invitados, códigos QR de acceso y métricas de impresión instantánea."
+  >
+    <ng-container actions>
+      <button
+        type="button"
+        (click)="loadEvents(true)"
+        class="px-3 py-1.5 rounded-md border border-border bg-card hover:bg-muted font-semibold text-xs transition-all active:scale-95 flex items-center gap-1.5 text-foreground cursor-pointer"
+      >
+        <app-icon name="refresh" class="w-3.5 h-3.5" [class.animate-spin]="isLoading()" />
+        <span>Sincronizar</span>
+      </button>
+      @if (isSuperAdmin()) {
+        <button
+          type="button"
+          (click)="openCreateDrawer()"
+          class="px-3 py-1.5 rounded-md bg-foreground text-background font-semibold text-xs shadow-sm hover:opacity-90 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+        >
+          <app-icon name="plus" class="w-3.5 h-3.5" />
+          <span>Nuevo Evento</span>
+        </button>
+      }
+    </ng-container>
+  </app-page-header>
+
+  <!-- Top Section: 4 KPI Cards Grid for Events -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+    <app-kpi-card
+      label="Total Eventos"
+      [value]="totalEventsCount()"
+      description="Registrados en la plataforma"
+      icon="events"
+    />
+    <app-kpi-card
+      label="Eventos Activos"
+      [value]="activeEventsCount()"
+      description="Capturando fotos 360°"
+      icon="camera"
+      iconColorClass="text-emerald-500"
+      badgeText="EN VIVO"
+      badgeVariant="emerald"
+      valueColorClass="text-foreground"
+    />
+    <app-kpi-card
+      label="Fotos Capturadas"
+      [value]="totalPhotosCount()"
+      description="Subidas a la galería"
+      icon="camera"
+      iconColorClass="text-blue-500"
+      badgeText="HD"
+      badgeVariant="primary"
+    />
+    <app-kpi-card
+      label="Impresiones Térmicas"
+      [value]="totalPrintsCount()"
+      description="Procesadas e impresas"
+      icon="printer"
+      iconColorClass="text-amber-500"
+      badgeText="TÉRMICA"
+      badgeVariant="amber"
+    />
+  </div>
+
+  <!-- Toolbar: Search Bar at Top, Status Pills + View Switcher below on Mobile -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+    
+    <!-- Top Search Input (W-full on mobile, flex-1 on desktop) -->
+    <div class="w-full sm:w-80 lg:w-96">
+      <app-search-input
+        [value]="searchQuery()"
+        placeholder="Buscar evento o ubicación..."
+        (searchInput)="onSearchInput($event)"
+      />
+    </div>
+
+    <!-- Mobile Row: Status Filter Pills + View Switcher (Debajo del buscador en móvil) -->
+    <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar">
+      
+      <!-- Status Filter Pills Segmented -->
+      <div class="flex items-center bg-muted/40 p-1 rounded-md border border-border/80 text-xs font-bold shrink-0">
+        <button
+          (click)="setStatusFilter('ALL')"
+          class="px-2.5 py-1 rounded text-xs transition-all cursor-pointer"
+          [class.bg-background]="selectedStatusFilter() === 'ALL'"
+          [class.text-foreground]="selectedStatusFilter() === 'ALL'"
+          [class.shadow-sm]="selectedStatusFilter() === 'ALL'"
+          [class.text-muted-foreground]="selectedStatusFilter() !== 'ALL'"
+        >
+          Todos
+        </button>
+        <button
+          (click)="setStatusFilter('ACTIVE')"
+          class="px-2.5 py-1 rounded text-xs transition-all cursor-pointer flex items-center gap-1.5"
+          [class.bg-background]="selectedStatusFilter() === 'ACTIVE'"
+          [class.text-foreground]="selectedStatusFilter() === 'ACTIVE'"
+          [class.shadow-sm]="selectedStatusFilter() === 'ACTIVE'"
+          [class.text-muted-foreground]="selectedStatusFilter() !== 'ACTIVE'"
+        >
+          <span>Activos</span>
+          <span class="px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-[9px] text-emerald-400 font-bold font-mono">{{ activeEventsCount() }}</span>
+        </button>
+        <button
+          (click)="setStatusFilter('FINISHED')"
+          class="px-2.5 py-1 rounded text-xs transition-all cursor-pointer flex items-center gap-1.5"
+          [class.bg-background]="selectedStatusFilter() === 'FINISHED'"
+          [class.text-foreground]="selectedStatusFilter() === 'FINISHED'"
+          [class.shadow-sm]="selectedStatusFilter() === 'FINISHED'"
+          [class.text-muted-foreground]="selectedStatusFilter() !== 'FINISHED'"
+        >
+          <span>Finalizados</span>
+        </button>
+      </div>
+
+      <!-- View Switcher Reutilizable -->
+      <app-view-switcher
+        [mode]="viewMode()"
+        (modeChange)="viewMode.set($event)"
+      />
+    </div>
+
+  </div>
+
+  <!-- MAIN CONTAINER: CARDS / TABLE WITH SKELETON LOADING & FULL FLEX HEIGHT -->
+  @if (hasError()) {
+    <app-error-boundary
+      title="No se pudieron cargar los eventos"
+      message="Ocurrió un problema de comunicación con la base de datos o el servidor. Comprueba tu conexión e intenta sincronizar de nuevo."
+      (onRetry)="loadEvents(true)"
+    />
+  } @else if (isLoading()) {
+    @if (viewMode() === 'table') {
+      <div class="flex-1 rounded-lg border border-border/80 bg-popover-solid overflow-hidden flex flex-col justify-between min-h-0 animate-pulse">
+        <div class="overflow-x-auto flex-1">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-popover-solid border-b border-border/60 text-muted-foreground font-bold uppercase tracking-wider text-[10px]">
+              <tr>
+                <th class="py-3 px-4">Evento & Anfitrión</th>
+                <th class="py-3 px-3">Fecha & Hora</th>
+                <th class="py-3 px-3">Estado</th>
+                <th class="py-3 px-3">Código Acceso</th>
+                <th class="py-3 px-3 text-center">Métricas</th>
+                <th class="py-3 px-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border/40 bg-popover-solid">
+              @for (item of [1, 2, 3, 4, 5]; track item) {
+                <tr class="bg-muted/20">
+                  <td class="py-3 px-4"><div class="h-4 bg-muted/60 rounded w-40"></div></td>
+                  <td class="py-3 px-3"><div class="h-3.5 bg-muted/60 rounded w-24"></div></td>
+                  <td class="py-3 px-3"><div class="h-5 bg-muted/60 rounded w-20"></div></td>
+                  <td class="py-3 px-3"><div class="h-5 bg-muted/60 rounded w-16"></div></td>
+                  <td class="py-3 px-3 text-center"><div class="h-4 bg-muted/60 rounded w-28 mx-auto"></div></td>
+                  <td class="py-3 px-4 text-right"><div class="h-4 bg-muted/60 rounded w-8 ml-auto"></div></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3 border-t border-border/60 bg-popover-solid flex items-center justify-between">
+          <div class="h-3 bg-muted/60 rounded w-32"></div>
+          <div class="h-4 bg-muted/60 rounded w-48"></div>
+        </div>
+      </div>
+    } @else {
+      <div class="flex-1 rounded-lg border border-border/80 bg-card p-4 space-y-3 animate-pulse">
+        <div class="h-8 bg-muted/60 rounded-md w-full"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div class="h-40 bg-muted/40 rounded-xl"></div>
+          <div class="h-40 bg-muted/40 rounded-xl"></div>
+          <div class="h-40 bg-muted/40 rounded-xl"></div>
+        </div>
+      </div>
+    }
+  } @else {
+    @if (viewMode() === 'cards') {
+      <div class="flex-1 overflow-y-auto pr-1 no-scrollbar">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-300">
+          @for (event of paginatedEvents(); track event.id) {
+            <div class="rounded-xl border border-border/80 bg-card overflow-hidden shadow-none hover:border-primary/50 transition-all flex flex-col justify-between group">
+              
+              <!-- Gradient / Cover Banner con Badge de Estado y QR Fast Button -->
+              <div class="relative h-28 w-full p-3.5 bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 flex flex-col justify-between overflow-hidden">
+                @if (event.coverImage) {
+                  <img [src]="event.coverImage" [alt]="event.title" class="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-500 group-hover:scale-105" />
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30 z-0"></div>
+                }
+
+                <div class="flex items-center justify-between z-10 gap-2">
+                  <div class="flex items-center gap-1.5">
+                    @if (event.status === 'ACTIVE') {
+                      <span class="px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400 text-[10px] font-bold bg-black/60 backdrop-blur-md flex items-center gap-1.5 shadow-xs">
+                        <span class="relative flex h-1.5 w-1.5">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                        </span>
+                        ACTIVO
+                      </span>
+                    } @else {
+                      <span class="px-2 py-0.5 rounded-full border border-border/60 text-muted-foreground text-[10px] font-bold bg-black/60 backdrop-blur-md">● FINALIZADO</span>
+                    }
+
+                    @let retention = getRetentionDaysRemaining(event);
+                    <span
+                      class="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono border backdrop-blur-md"
+                      [class.bg-emerald-500\/20]="retention.status === 'ok'"
+                      [class.text-emerald-300]="retention.status === 'ok'"
+                      [class.border-emerald-500\/30]="retention.status === 'ok'"
+                      [class.bg-amber-500\/20]="retention.status === 'warning'"
+                      [class.text-amber-300]="retention.status === 'warning'"
+                      [class.border-amber-500\/30]="retention.status === 'warning'"
+                      [class.bg-rose-500\/20]="retention.status === 'expired'"
+                      [class.text-rose-300]="retention.status === 'expired'"
+                      [class.border-rose-500\/30]="retention.status === 'expired'"
+                    >
+                      {{ retention.label }}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    (click)="openQrModal(event)"
+                    class="p-1 rounded-md bg-black/40 hover:bg-black/60 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 backdrop-blur-md transition-all cursor-pointer"
+                    title="Ver Código QR de Invitados"
+                  >
+                    <app-icon name="qr" class="w-3.5 h-3.5 text-emerald-400" />
+                    <span>QR</span>
+                  </button>
+                </div>
+
+                <div class="z-10 flex items-center justify-between">
+                  <span class="text-[10px] font-mono font-bold text-white/90 uppercase tracking-widest drop-shadow-xs">Código: {{ event.uniqueCode }}</span>
+                  <span class="text-[10px] text-white/80 font-mono drop-shadow-xs">📅 {{ event.date | date:'shortDate' }}</span>
+                </div>
+              </div>
+
+              <!-- Contenido e Información del Evento -->
+              <div class="p-4 pt-3 space-y-3 flex-1 flex flex-col justify-between">
+                <div class="flex items-start gap-2.5">
+                  @if (event.logoUrl) {
+                    <img [src]="event.logoUrl" [alt]="event.title" class="w-8 h-8 rounded-lg object-contain bg-white border border-border p-0.5 shrink-0 mt-0.5 shadow-2xs" />
+                  }
+                  <div class="min-w-0 flex-1">
+                    <h3 class="text-sm font-bold text-foreground truncate" [title]="event.title">{{ event.title }}</h3>
+                    <p class="text-[11px] text-muted-foreground mt-0.5 truncate">👤 Anfitrión: {{ event.hostName }} • 👑 Encargado: {{ event.adminName || 'Admin' }}</p>
+                  </div>
+                </div>
+
+                <!-- Métricas de Fotos e Impresiones del Evento -->
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                  <div class="p-2 rounded-lg bg-muted/40 border border-border/60">
+                    <span class="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block">Fotos Capturadas</span>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <app-icon name="camera" class="w-3.5 h-3.5 text-primary" />
+                      <span class="font-extrabold text-foreground font-mono text-sm">{{ event.totalPhotos }}</span>
+                    </div>
+                  </div>
+
+                  <div class="p-2 rounded-lg bg-muted/40 border border-border/60">
+                    <span class="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider block">Impresiones</span>
+                    <div class="flex items-center gap-1.5 mt-1">
+                      <app-icon name="printer" class="w-3.5 h-3.5 text-amber-500" />
+                      <span class="font-extrabold text-foreground font-mono text-sm">{{ event.totalPrints }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Acciones Rápidas del Evento (WhatsApp Anfitrión, Live Wall, Print Station, More) -->
+                <div class="pt-2 border-t border-border/40 flex items-center justify-between gap-1.5">
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      (click)="sendHostWhatsApp(event)"
+                      class="px-2 py-1 rounded-md bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 border border-emerald-500/30 text-[11px] font-extrabold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                      title="Enviar Galería al Anfitrión por WhatsApp"
+                    >
+                      <app-icon name="phone" class="w-3 h-3 text-emerald-400" />
+                      <span>WA Anfitrión</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="openLiveWall(event)"
+                      class="px-2 py-1 rounded-md bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-400 border border-indigo-500/30 text-[11px] font-extrabold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                      title="Proyectar Muro en Vivo"
+                    >
+                      <app-icon name="eye" class="w-3 h-3 text-indigo-400" />
+                      <span>Live Wall</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="goToPrintStation(event)"
+                      class="px-2 py-1 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-[11px] font-extrabold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                      title="Estación de Impresión"
+                    >
+                      <app-icon name="printer" class="w-3 h-3 text-amber-400" />
+                      <span>Impresión</span>
+                    </button>
+                  </div>
+
+                  <div class="relative" (appClickOutside)="closeRowMenu()">
+                    <button
+                      (click)="toggleRowMenu(event.id, $event)"
+                      class="p-1.5 rounded-lg border border-border/80 bg-card hover:bg-muted text-foreground transition-all cursor-pointer flex items-center gap-1"
+                      title="Más Opciones"
+                    >
+                      <app-icon name="more" class="w-4 h-4" />
+                    </button>
+
+                    <!-- Floating Context Menu para Tarjetas -->
+                    @if (activeRowMenuId() === event.id) {
+                      <div
+                        class="absolute right-0 bottom-full mb-1.5 w-48 bg-popover-solid text-popover-foreground border border-border rounded-xl shadow-2xl p-1 z-[9999] text-left space-y-0.5 animate-dropdown-smooth-right"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <button (click)="openQrModal(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-bold text-emerald-400 cursor-pointer">
+                          <app-icon name="qr" class="w-3.5 h-3.5 text-emerald-400" /> Ver Código QR
+                        </button>
+                        <button (click)="openReportModal(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-bold text-indigo-400 cursor-pointer">
+                          <app-icon name="dashboard" class="w-3.5 h-3.5 text-indigo-400" /> Reporte de Cierre
+                        </button>
+                        <button (click)="openLiveWall(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-bold text-primary cursor-pointer">
+                          <app-icon name="eye" class="w-3.5 h-3.5 text-primary" /> Muro en Vivo
+                        </button>
+                        <button (click)="goToPrintQueue(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-bold text-amber-400 cursor-pointer">
+                          <app-icon name="printer" class="w-3.5 h-3.5 text-amber-400" /> Cola de Impresión
+                        </button>
+                        <div class="h-px bg-border/60 my-1"></div>
+                        <button (click)="openViewDrawer(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-medium text-foreground cursor-pointer">
+                          <app-icon name="eye" class="w-3.5 h-3.5 text-muted-foreground" /> Ver Detalles
+                        </button>
+                        <button (click)="openEditDrawer(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-medium text-foreground cursor-pointer">
+                          <app-icon name="edit" class="w-3.5 h-3.5 text-muted-foreground" /> Editar Evento
+                        </button>
+                        <button (click)="confirmDelete(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg text-xs font-bold cursor-pointer">
+                          <app-icon name="trash" class="w-3.5 h-3.5 text-rose-400" /> Eliminar
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="col-span-full p-12 text-center text-muted-foreground bg-card border border-border rounded-xl">
+              <div class="max-w-xs mx-auto space-y-2">
+                <app-icon name="search" class="w-8 h-8 mx-auto text-muted-foreground" />
+                <h4 class="text-sm font-bold text-foreground">No hay eventos registrados</h4>
+                <p class="text-xs">No se encontraron eventos que coincidan con "{{ searchQuery() }}".</p>
+                <button (click)="clearFilters()" class="mt-2 px-3 py-1 rounded-md border border-border bg-muted hover:bg-card text-xs font-semibold cursor-pointer">Limpiar Filtros</button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    } @else {
+      <!-- VISTA TABLA LISTA -->
+      <div class="flex-1 rounded-lg border border-border/80 bg-popover-solid shadow-none overflow-hidden flex flex-col justify-between min-h-0 view-mode-container animate-in fade-in duration-300">
+        <div class="overflow-x-auto overflow-y-auto flex-1 no-scrollbar bg-popover-solid">
+          <table class="w-full text-left text-xs min-w-[750px]">
+            <thead class="bg-popover-solid border-b border-border/60 text-muted-foreground font-bold uppercase tracking-wider text-[10px] sticky top-0 z-20 shadow-xs">
+              <tr>
+                <th class="py-2.5 px-4 bg-popover-solid">Evento & Anfitrión</th>
+                <th class="py-2.5 px-3 bg-popover-solid">Fecha & Hora</th>
+                <th class="py-2.5 px-3 bg-popover-solid">Estado</th>
+                <th class="py-2.5 px-3 bg-popover-solid">Código Acceso</th>
+                <th class="py-2.5 px-3 bg-popover-solid text-center">Métricas</th>
+                <th class="py-2.5 px-4 text-right bg-popover-solid">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border/40 font-medium bg-popover-solid">
+              @for (event of paginatedEvents(); track event.id) {
+                <tr class="hover:bg-muted/40 transition-all duration-200 group table-row-smooth animate-in fade-in duration-200">
+                  <td class="py-2.5 px-4">
+                    <div>
+                      <p class="font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{{ event.title }}</p>
+                      <span class="text-[11px] text-muted-foreground">👤 {{ event.hostName }} • 👑 {{ event.adminName || 'Admin' }} • 📍 {{ event.location }}</span>
+                    </div>
+                  </td>
+                  <td class="py-2.5 px-3 text-muted-foreground font-mono text-[11px]">
+                    {{ event.date | date:'shortDate' }}
+                  </td>
+                  <td class="py-2.5 px-3">
+                    @if (event.status === 'ACTIVE') {
+                      <span class="px-2 py-0.5 rounded-full border border-emerald-500/30 text-emerald-400 text-[10px] font-semibold bg-emerald-500/10 flex items-center gap-1.5 w-fit">
+                        <span class="relative flex h-1.5 w-1.5">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                        </span>
+                        ACTIVO
+                      </span>
+                    } @else {
+                      <span class="px-2 py-0.5 rounded-full border border-border text-muted-foreground text-[10px] font-semibold bg-muted/20">● {{ event.status }}</span>
+                    }
+                  </td>
+                  <td class="py-2.5 px-3">
+                    <span class="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded border border-border">
+                      {{ event.uniqueCode }}
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-mono">
+                    <span class="text-primary font-bold">{{ event.totalPhotos }} fotos</span> • 
+                    <span class="text-amber-500 font-bold">{{ event.totalPrints }} imp.</span>
+                  </td>
+                  <td class="py-2.5 px-4 text-right relative" (appClickOutside)="closeRowMenu()">
+                    <button
+                      type="button"
+                      (click)="toggleRowMenu(event.id, $event)"
+                      class="text-muted-foreground hover:text-foreground text-xs p-1 rounded hover:bg-muted cursor-pointer transition-colors"
+                    >
+                      <app-icon name="more" class="w-4 h-4" />
+                    </button>
+
+                    <!-- Context Menu para Filas de Tabla (Apertura hacia la izquierda centrado verticalmente para evitar cualquier recorte) -->
+                    @if (activeRowMenuId() === event.id) {
+                      <div
+                        class="absolute right-8 top-1/2 -translate-y-1/2 w-48 bg-popover-solid text-popover-foreground border border-border rounded-xl shadow-2xl p-1 z-[99999] text-left space-y-0.5 animate-dropdown-smooth-right"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <button (click)="openQrModal(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-bold text-emerald-400 cursor-pointer">
+                          <app-icon name="qr" class="w-3.5 h-3.5 text-emerald-400" /> Ver Código QR
+                        </button>
+                        <button (click)="openReportModal(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-bold text-indigo-400 cursor-pointer">
+                          <app-icon name="dashboard" class="w-3.5 h-3.5 text-indigo-400" /> Reporte de Cierre
+                        </button>
+                        <button (click)="openLiveWall(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-bold text-primary cursor-pointer">
+                          <app-icon name="eye" class="w-3.5 h-3.5 text-primary" /> Muro en Vivo
+                        </button>
+                        <button (click)="goToPrintQueue(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-bold text-amber-400 cursor-pointer">
+                          <app-icon name="printer" class="w-3.5 h-3.5 text-amber-400" /> Cola de Impresión
+                        </button>
+                        <div class="h-px bg-border/60 my-1"></div>
+                        <button (click)="openViewDrawer(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-medium text-foreground cursor-pointer">
+                          <app-icon name="eye" class="w-3.5 h-3.5 text-muted-foreground" /> Ver Detalles
+                        </button>
+                        <button (click)="openEditDrawer(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 hover:bg-muted rounded-lg text-xs font-medium text-foreground cursor-pointer">
+                          <app-icon name="edit" class="w-3.5 h-3.5 text-muted-foreground" /> Editar Evento
+                        </button>
+                        <button (click)="confirmDelete(event)" class="w-full flex items-center gap-2 px-2.5 py-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg text-xs font-bold cursor-pointer">
+                          <app-icon name="trash" class="w-3.5 h-3.5 text-rose-400" /> Eliminar
+                        </button>
+                      </div>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="6" class="p-12 text-center text-muted-foreground">
+                    <div class="max-w-xs mx-auto space-y-2">
+                      <app-icon name="search" class="w-8 h-8 mx-auto text-muted-foreground" />
+                      <h4 class="text-sm font-bold text-foreground">Sin eventos encontrados</h4>
+                      <p class="text-xs">No hay eventos que coincidan con la búsqueda.</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Fixed Bottom Pagination Footer Reutilizable -->
+        <app-table-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="totalPages()"
+          [pageSize]="pageSize()"
+          [totalCount]="filteredEvents().length"
+          (pageChange)="currentPage.set($event)"
+          (pageSizeChange)="pageSize.set($event); currentPage.set(1)"
+        />
+      </div>
+    }
+  }
+
+  <!-- CREATE / EDIT EVENT DRAWER CON 3 PESTAÑAS (General, Marcos/Overlays, Plan y Límites) -->
+  <app-drawer
+    [(isOpen)]="isFormDrawerOpen"
+    [title]="drawerMode() === 'create' ? 'Crear Nuevo Evento 360°' : drawerMode() === 'edit' ? 'Editar Evento' : 'Detalles del Evento'"
+    [subtitle]="drawerMode() === 'view' ? 'Información del evento y código QR' : 'Configura las reglas de la base de datos PostgreSQL'"
+  >
+    @if (drawerMode() === 'view' && selectedEvent(); as ev) {
+      <div class="space-y-4 text-xs">
+        <div class="relative p-4 rounded-xl bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 text-white overflow-hidden shadow-sm">
+          @if (ev.coverImage) {
+            <img [src]="ev.coverImage" [alt]="ev.title" class="absolute inset-0 w-full h-full object-cover z-0" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30 z-0"></div>
+          }
+
+          <div class="relative z-10 flex items-start gap-3">
+            @if (ev.logoUrl) {
+              <img [src]="ev.logoUrl" [alt]="ev.title" class="w-10 h-10 rounded-lg object-contain bg-white border border-white/20 p-0.5 shrink-0 shadow-sm" />
+            }
+            <div class="min-w-0 flex-1 space-y-0.5">
+              <h4 class="text-base font-bold text-white drop-shadow-xs truncate">{{ ev.title }}</h4>
+              <p class="text-xs text-white/90 drop-shadow-xs truncate">👤 Anfitrión: {{ ev.hostName }}</p>
+              <p class="text-xs text-white/80 drop-shadow-xs truncate">📍 {{ ev.location }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2">
+          <div class="flex justify-between py-1 border-b border-border/40"><span class="text-muted-foreground">Código de Acceso</span><span class="font-mono font-bold text-foreground">{{ ev.uniqueCode }}</span></div>
+          <div class="flex justify-between py-1 border-b border-border/40"><span class="text-muted-foreground">Fecha del Evento</span><span class="font-mono text-foreground">{{ ev.date | date:'mediumDate' }}</span></div>
+          <div class="flex justify-between py-1 border-b border-border/40"><span class="text-muted-foreground">Límites por Invitado</span><span class="font-mono font-bold text-foreground">{{ ev.maxPhotosPerGuest || 10 }} Fotos / {{ ev.maxPrintsPerGuest || 1 }} Imp.</span></div>
+          <div class="flex justify-between py-1 border-b border-border/40"><span class="text-muted-foreground">Total Fotografías</span><span class="font-mono font-bold text-primary">{{ ev.totalPhotos }}</span></div>
+          <div class="flex justify-between py-1 border-b border-border/40"><span class="text-muted-foreground">Total Impresiones</span><span class="font-mono font-bold text-amber-500">{{ ev.totalPrints }}</span></div>
+        </div>
+
+        <button type="button" (click)="openQrModal(ev)" class="w-full h-9 rounded-md bg-foreground text-background font-bold text-xs shadow-sm mt-4 flex items-center justify-center gap-1.5 cursor-pointer">
+          <app-icon name="qr" class="w-4 h-4" />
+          <span>Ver y Compartir Código QR</span>
+        </button>
+      </div>
+    } @else {
+      <div class="flex flex-col h-full space-y-4">
+        
+        <!-- Sub-Navegación de 3 Pestañas en el Formulario -->
+        <div class="flex border-b border-border gap-4 text-xs font-bold shrink-0">
+          <button
+            type="button"
+            (click)="activeDrawerTab.set('general')"
+            class="pb-2 transition-all cursor-pointer border-b-2"
+            [class.border-primary]="activeDrawerTab() === 'general'"
+            [class.text-primary]="activeDrawerTab() === 'general'"
+            [class.border-transparent]="activeDrawerTab() !== 'general'"
+            [class.text-muted-foreground]="activeDrawerTab() !== 'general'"
+          >
+            Detalles Generales
+          </button>
+          <button
+            type="button"
+            (click)="activeDrawerTab.set('frames')"
+            class="pb-2 transition-all cursor-pointer border-b-2"
+            [class.border-primary]="activeDrawerTab() === 'frames'"
+            [class.text-primary]="activeDrawerTab() === 'frames'"
+            [class.border-transparent]="activeDrawerTab() !== 'frames'"
+            [class.text-muted-foreground]="activeDrawerTab() !== 'frames'"
+          >
+            Marcos / Overlays
+          </button>
+          <button
+            type="button"
+            (click)="activeDrawerTab.set('limits')"
+            class="pb-2 transition-all cursor-pointer border-b-2"
+            [class.border-primary]="activeDrawerTab() === 'limits'"
+            [class.text-primary]="activeDrawerTab() === 'limits'"
+            [class.border-transparent]="activeDrawerTab() !== 'limits'"
+            [class.text-muted-foreground]="activeDrawerTab() !== 'limits'"
+          >
+            Plan y Límites
+          </button>
+        </div>
+
+        <form (submit)="onFormSubmit(); $event.preventDefault()" class="space-y-4 flex-1 flex flex-col justify-between">
+          
+          <!-- PESTAÑA 1: DETALLES GENERALES -->
+          @if (activeDrawerTab() === 'general') {
+            <div class="space-y-3 animate-in fade-in duration-200">
+              
+              <!-- Selector de Administrador Encargado / Creador -->
+              <div class="space-y-1 p-2.5 rounded-xl bg-muted/40 border border-border/60">
+                <label class="text-xs font-bold text-foreground flex items-center justify-between">
+                  <span>Administrador Encargado *</span>
+                  <span class="text-[10px] text-primary font-mono font-bold">Prisma: admin_id</span>
+                </label>
+                <div class="relative mt-1">
+                  <select
+                    [value]="eventModel().adminId"
+                    (change)="eventModel.update(m => ({ ...m, adminId: $any($event.target).value }))"
+                    class="w-full h-9 rounded-lg border border-border bg-card px-3 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer pr-8"
+                  >
+                    @for (u of usersList(); track u.id) {
+                      <option [value]="u.id" class="bg-slate-900 text-white py-1">
+                        👑 {{ u.fullName || u.email }} ({{ u.role }})
+                      </option>
+                    }
+                  </select>
+                  <app-icon name="chevron-down" class="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground" />
+                </div>
+                <p class="text-[10px] text-muted-foreground">Determina la asignación y responsabilidad operativa del evento.</p>
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-foreground">Nombre del Evento *</label>
+                <input type="text" hlmInput [formField]="eventForm.name" placeholder="Ej. Boda Sofía & Carlos 360" class="h-9 rounded-md text-xs" />
+                @if (eventForm.name().touched() && eventForm.name().errors().length) {
+                  <p class="text-[10px] text-rose-500 font-medium">{{ eventForm.name().errors()[0].message }}</p>
+                }
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-foreground">Descripción del Evento</label>
+                <textarea hlmInput [formField]="eventForm.description" rows="2" placeholder="Ej. Celebración civil en jardín principal..." class="w-full rounded-md text-xs p-2 bg-card border border-border resize-none"></textarea>
+              </div>
+
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-foreground">Ubicación / Lugar</label>
+                <input type="text" hlmInput [formField]="eventForm.location" placeholder="Ej. Salón Real Ritz Carlton" class="h-9 rounded-md text-xs" />
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div class="space-y-1">
+                  <label class="text-xs font-bold text-foreground">Fecha del Evento *</label>
+                  <input type="date" hlmInput [formField]="eventForm.eventDate" class="h-9 rounded-md text-xs" />
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs font-bold text-foreground">Hora Inicio / Fin</label>
+                  <div class="flex items-center gap-1">
+                    <input type="time" hlmInput [formField]="eventForm.startTime" class="h-9 rounded-md text-xs w-1/2" />
+                    <input type="time" hlmInput [formField]="eventForm.endTime" class="h-9 rounded-md text-xs w-1/2" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-2 border-t border-border/40 space-y-2">
+                <span class="text-xs font-bold text-foreground block">Datos del Anfitrión</span>
+                <div class="space-y-1">
+                  <label class="text-[11px] font-medium text-muted-foreground">Nombre Completo *</label>
+                  <input type="text" hlmInput [formField]="eventForm.hostName" placeholder="Ej. Sofía Martínez" class="h-9 rounded-md text-xs" />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="space-y-1">
+                    <label class="text-[11px] font-medium text-muted-foreground">Teléfono Anfitrión</label>
+                    <input type="text" hlmInput [formField]="eventForm.hostPhone" placeholder="+52 55 1234 5678" class="h-9 rounded-md text-xs" />
+                  </div>
+                  <div class="space-y-1">
+                    <label class="text-[11px] font-medium text-muted-foreground">Correo Anfitrión</label>
+                    <input type="email" hlmInput [formField]="eventForm.hostEmail" placeholder="sofia@gmail.com" class="h-9 rounded-md text-xs" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Personalización de Marca & Branding (Campos Prisma) -->
+              <div class="pt-2 border-t border-border/40 space-y-2">
+                <span class="text-xs font-bold text-foreground block">Personalización & Branding (Prisma)</span>
+                
+                <div class="space-y-1">
+                  <label class="text-[11px] font-medium text-muted-foreground">Color Principal del Evento (primaryColor)</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" [value]="eventModel().primaryColor" (input)="eventModel.update(m => ({...m, primaryColor: $any($event.target).value}))" class="w-8 h-8 rounded border border-border cursor-pointer bg-transparent" />
+                    <input type="text" hlmInput [value]="eventModel().primaryColor" (input)="eventModel.update(m => ({...m, primaryColor: $any($event.target).value}))" placeholder="#6366f1" class="h-9 rounded-md text-xs font-mono flex-1" />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="space-y-1">
+                    <label class="text-[11px] font-medium text-muted-foreground">Portada del Evento (coverImage)</label>
+                    <input type="file" #coverInput accept="image/*" (change)="onCoverImageSelected($event)" class="hidden" />
+                    <button type="button" (click)="coverInput.click()" class="w-full h-9 rounded-md border border-border bg-card hover:bg-muted text-xs font-medium text-foreground flex items-center justify-center gap-1.5 cursor-pointer">
+                      <app-icon name="camera" class="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>{{ eventModel().coverImage ? 'Cambiar Portada' : 'Subir Portada' }}</span>
+                    </button>
+                    @if (eventModel().coverImage) {
+                      <div class="relative w-full h-12 rounded-lg overflow-hidden border border-border mt-1">
+                        <img [src]="eventModel().coverImage" alt="Portada" class="w-full h-full object-cover" />
+                      </div>
+                    }
+                  </div>
+
+                  <div class="space-y-1">
+                    <label class="text-[11px] font-medium text-muted-foreground">Logo de Marca (logoUrl)</label>
+                    <input type="file" #logoInput accept="image/*" (change)="onLogoUrlSelected($event)" class="hidden" />
+                    <button type="button" (click)="logoInput.click()" class="w-full h-9 rounded-md border border-border bg-card hover:bg-muted text-xs font-medium text-foreground flex items-center justify-center gap-1.5 cursor-pointer">
+                      <app-icon name="shield" class="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>{{ eventModel().logoUrl ? 'Cambiar Logo' : 'Subir Logo' }}</span>
+                    </button>
+                    @if (eventModel().logoUrl) {
+                      <div class="relative w-full h-12 rounded-lg p-1 bg-white border border-border mt-1 flex items-center justify-center">
+                        <img [src]="eventModel().logoUrl" alt="Logo" class="max-h-full max-w-full object-contain" />
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- PESTAÑA 2: MARCOS / OVERLAYS (SUBIDA REAL CON CLOUDINARY & ORIENTACIÓN) -->
+          @if (activeDrawerTab() === 'frames') {
+            <div class="space-y-3 animate-in fade-in duration-200">
+              <input type="file" #frameFileInput accept="image/png,image/svg+xml" (change)="onFrameFileSelected($event)" class="hidden" />
+              
+              <div (click)="frameFileInput.click()" class="border-2 border-dashed border-primary/40 rounded-xl p-5 text-center hover:bg-primary/5 transition-colors cursor-pointer group space-y-2">
+                <div class="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform">
+                  <app-icon name="camera" class="w-5 h-5 text-primary" [class.animate-spin]="isUploadingMedia()" />
+                </div>
+                <p class="text-xs font-bold text-foreground">
+                  {{ isUploadingMedia() ? 'Subiendo a Cloudinary CDN...' : 'Haz clic para subir nuevo marco Canva (PNG transparente)' }}
+                </p>
+                <p class="text-[10px] text-muted-foreground">Auto-detecta Vertical (1080x1920), Horizontal (1920x1080) o Cuadrado</p>
+              </div>
+
+              <!-- Lista de Marcos Asignados al Evento -->
+              <div class="space-y-2 pt-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-foreground block">Marcos Activos en este Evento:</span>
+                  <span class="text-[11px] font-mono text-muted-foreground">{{ eventFramesList().length }} asignados</span>
+                </div>
+                
+                <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                  @for (frame of eventFramesList(); track frame.id) {
+                    <div class="flex items-center justify-between p-2 rounded-xl border border-border bg-card shadow-2xs">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <img [src]="frame.previewUrl" [alt]="frame.name" class="w-10 h-10 rounded-lg object-contain border border-border bg-black/20 p-0.5 shrink-0" />
+                        <div class="min-w-0">
+                          <p class="text-xs font-bold text-foreground leading-tight truncate">{{ frame.name }}</p>
+                          <div class="flex items-center gap-1 mt-0.5">
+                            @if (frame.orientation === 'PORTRAIT') {
+                              <span class="px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 text-[9px] font-mono font-bold">📱 Vertical</span>
+                            } @else if (frame.orientation === 'LANDSCAPE') {
+                              <span class="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 text-[9px] font-mono font-bold">🖥️ Horizontal</span>
+                            } @else {
+                              <span class="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 text-[9px] font-mono font-bold">⏹️ Cuadrado</span>
+                            }
+                            <span class="px-1.5 py-0.2 rounded bg-muted text-muted-foreground text-[9px] font-mono">PNG Overlay</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        (click)="removeFrame(frame.id)"
+                        class="p-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs transition-colors cursor-pointer shrink-0 ml-2"
+                        title="Remover Marco"
+                      >
+                        <app-icon name="trash" class="w-3.5 h-3.5 text-rose-400" />
+                      </button>
+                    </div>
+                  } @empty {
+                    <p class="text-xs text-muted-foreground text-center py-4 bg-muted/10 rounded-xl border border-dashed border-border/60">
+                      No hay marcos asignados aún. Sube uno o elige de la biblioteca abajo.
+                    </p>
+                  }
+                </div>
+              </div>
+
+              <!-- Selector de la Biblioteca Global de Marcos -->
+              @if (globalFramesList().length > 0) {
+                <div class="space-y-1.5 pt-2 border-t border-border/40">
+                  <span class="text-[11px] font-bold text-muted-foreground block">Biblioteca Global de Marcos Canva:</span>
+                  <div class="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                    @for (gFrame of globalFramesList(); track gFrame.id) {
+                      <div
+                        (click)="addGlobalFrameToEvent(gFrame)"
+                        class="flex items-center gap-2 p-1.5 rounded-lg border border-border/60 bg-muted/20 hover:bg-primary/10 hover:border-primary/40 transition-colors cursor-pointer text-left"
+                      >
+                        <img [src]="gFrame.previewImage" [alt]="gFrame.name" class="w-8 h-8 rounded object-contain bg-black/20 shrink-0" />
+                        <div class="min-w-0 flex-1">
+                          <p class="text-[11px] font-medium text-foreground truncate leading-tight">{{ gFrame.name }}</p>
+                          <span class="text-[9px] font-mono text-muted-foreground">
+                            {{ gFrame.orientation === 'PORTRAIT' ? '📱 Vertical' : gFrame.orientation === 'LANDSCAPE' ? '🖥️ Horiz.' : '⏹️ Cuad.' }}
+                          </span>
+                        </div>
+                        <app-icon name="plus" class="w-3.5 h-3.5 text-primary shrink-0" />
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- PESTAÑA 3: PLAN Y LÍMITES -->
+          @if (activeDrawerTab() === 'limits') {
+            <div class="space-y-3 animate-in fade-in duration-200">
+              <h4 class="text-xs font-bold text-foreground border-b border-border/40 pb-1">Reglas de Monetización & Cuotas Prisma</h4>
+              
+              <div class="space-y-1">
+                <label class="text-xs font-bold text-foreground">Máximo Fotos / Invitado *</label>
+                <input type="number" hlmInput [formField]="eventForm.maxPhotosPerGuest" class="h-9 rounded-md text-xs font-mono" />
+                <p class="text-[10px] text-muted-foreground">Cuántas capturas de fotos 360° puede tomar cada persona.</p>
+              </div>
+
+              <div class="space-y-1 pt-1">
+                <label class="text-xs font-bold text-foreground">Máximo Impresiones Térmicas *</label>
+                <input type="number" hlmInput [formField]="eventForm.maxPrintsPerGuest" class="h-9 rounded-md text-xs font-mono" />
+                <p class="text-[10px] text-muted-foreground">Cuántas de esas fotos puede mandar a la estación física de impresión.</p>
+              </div>
+
+              <div class="space-y-1 pt-1">
+                <label class="text-xs font-bold text-foreground">Días de Retención de Galería Cloud</label>
+                <input type="number" hlmInput [formField]="eventForm.galleryRetentionDays" class="h-9 rounded-md text-xs font-mono" />
+                <p class="text-[10px] text-muted-foreground">Días que permanecerán las fotos disponibles para descarga pública por QR.</p>
+              </div>
+            </div>
+          }
+
+          <div class="pt-4">
+            <button
+              type="submit"
+              hlmBtn
+              class="w-full h-9 rounded-md bg-foreground text-background font-bold text-xs shadow-sm cursor-pointer disabled:opacity-50"
+              [disabled]="eventForm().invalid() || isSubmitting()"
+            >
+              {{ isSubmitting() ? 'Guardando cambios...' : (drawerMode() === 'create' ? 'Guardar Evento en BD' : 'Actualizar Cambios') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    }
+  </app-drawer>
+
+  <!-- QR CODE MODAL REUTILIZABLE (Animado con Backdrop y QR Dinámico) -->
+  <app-event-qr-modal
+    [(isOpen)]="isQrModalOpen"
+    [event]="selectedEvent()"
+  />
+
+  <!-- EVENT REPORT MODAL (Executive Post-Event Analytics) -->
+  <app-event-report-modal
+    [(isOpen)]="isReportModalOpen"
+    [eventId]="selectedReportEventId()"
+    [event]="selectedEvent()"
+  />
+
+  <!-- PRINT QUEUE & PHOTOS MODAL (Grid Instagram Feed con Backend Real NestJS) -->
+  <app-print-queue-modal
+    [(isOpen)]="isPrintQueueModalOpen"
+    [eventTitle]="selectedEvent()?.title ?? selectedEvent()?.name ?? ''"
+    [photos]="eventPrintPhotos()"
+    (notifyWhatsApp)="onNotifyWhatsApp($event)"
+    (markAsPrinted)="onMarkAsPrinted($event)"
+  />
+
+  <!-- CONFIRM DELETE DIALOG -->
+  <app-confirm-dialog
+    [(isOpen)]="isDeleteConfirmOpen"
+    title="¿Eliminar evento?"
+    [message]="'¿Estás seguro de que deseas eliminar el evento ' + (selectedEvent()?.title ?? '') + '? Se conservará el respaldo de fotos en el servidor.'"
+    (confirmed)="executeDelete()"
+  />
+
+</div>

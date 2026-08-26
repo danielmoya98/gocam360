@@ -1,0 +1,138 @@
+<div class="h-full flex flex-col min-h-0 space-y-4 overflow-y-auto no-scrollbar pb-6 animate-in fade-in duration-300">
+  
+  <!-- Standardized Page Title Header -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-foreground">Configuración Global del Sistema</h2>
+      <p class="text-xs text-muted-foreground mt-0.5">Ajustes generales de la plataforma, retención cíclica de almacenamiento (Rolling Storage), cuotas por defecto y plantillas de WhatsApp.</p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="onSaveSettings()"
+        [disabled]="isSaving()"
+        class="px-4 py-2 rounded-lg bg-foreground text-background font-bold text-xs shadow-sm hover:opacity-90 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+      >
+        @if (isSaving()) {
+          <app-icon name="refresh" class="w-3.5 h-3.5 animate-spin" />
+          <span>Guardando...</span>
+        } @else {
+          <app-icon name="check" class="w-3.5 h-3.5" />
+          <span>Guardar Configuración</span>
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal de Ajustes (100% Sólido sin Transparencias bg-popover-solid) -->
+  <div class="space-y-4">
+    
+    <!-- SECCIÓN 1: Reglas Por Defecto para Eventos -->
+    <div class="p-5 rounded-xl border border-border/80 bg-popover-solid text-popover-foreground space-y-4 shadow-none">
+      <div class="border-b border-border/60 pb-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <app-icon name="events" class="w-4 h-4 text-primary" />
+          <h3 class="text-sm font-bold text-foreground">Reglas Por Defecto para Nuevos Eventos</h3>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold font-mono">SUPABASE CONFIG</span>
+      </div>
+
+      <form (submit)="onSaveSettings(); $event.preventDefault()" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Fotos por Invitado (defaultMaxPhotosPerGuest)</label>
+          <input type="number" hlmInput [formField]="settingsForm.defaultMaxPhotosPerGuest" class="h-9 rounded-md text-xs w-full font-mono" />
+          <p class="text-[10px] text-muted-foreground">Límite asignado por defecto al crear nuevos eventos.</p>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Impresiones por Invitado (defaultMaxPrintsPerGuest)</label>
+          <input type="number" hlmInput [formField]="settingsForm.defaultMaxPrintsPerGuest" class="h-9 rounded-md text-xs w-full font-mono" />
+          <p class="text-[10px] text-muted-foreground">Máximo de impresiones térmicas 10x15 permitidas.</p>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Días de Retención Cloud (defaultGalleryRetentionDays)</label>
+          <input type="number" hlmInput [formField]="settingsForm.defaultGalleryRetentionDays" class="h-9 rounded-md text-xs w-full font-mono" />
+          <p class="text-[10px] text-muted-foreground">Días de vigencia antes de la purga automática.</p>
+        </div>
+      </form>
+    </div>
+
+    <!-- SECCIÓN 2: Almacenamiento Cíclico & Purga Automática (Rolling Storage) -->
+    <div class="p-5 rounded-xl border border-border/80 bg-popover-solid text-popover-foreground space-y-4 shadow-none">
+      <div class="border-b border-border/60 pb-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <app-icon name="trash" class="w-4 h-4 text-rose-400" />
+          <h3 class="text-sm font-bold text-foreground">Purga Automática de Almacenamiento (Rolling Storage)</h3>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 text-[10px] font-bold font-mono">CRON & CLOUDINARY</span>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <p class="text-muted-foreground text-xs leading-relaxed">
+          El sistema ejecuta una limpieza nocturna automática a las <strong>04:00 AM</strong> mediante <code class="px-1.5 py-0.5 bg-muted rounded font-mono text-[11px] text-foreground">pg_cron</code> para detectar eventos vencidos según sus días de retención y liberar espacio en Cloudinary y Supabase para mantenerse siempre dentro de la capa gratuita.
+        </p>
+
+        <div class="p-4 rounded-xl bg-muted/30 border border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="space-y-0.5">
+            <span class="font-bold text-foreground text-xs block">Ejecución Manual Bajo Demanda</span>
+            <span class="text-[11px] text-muted-foreground">Dispara el procedimiento de purga en este momento para verificar el estado de los eventos.</span>
+          </div>
+
+          <button
+            type="button"
+            (click)="onRunManualPurge()"
+            [disabled]="isPurging()"
+            class="px-4 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-bold text-xs transition-all active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50 whitespace-nowrap shadow-xs"
+          >
+            @if (isPurging()) {
+              <app-icon name="refresh" class="w-3.5 h-3.5 animate-spin" />
+              <span>Analizando y Purgando...</span>
+            } @else {
+              <app-icon name="trash" class="w-3.5 h-3.5" />
+              <span>🧹 Ejecutar Purga Ahora (Prueba Manual)</span>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: Plantillas de Mensajes WhatsApp -->
+    <div class="p-5 rounded-xl border border-border/80 bg-popover-solid text-popover-foreground space-y-4 shadow-none">
+      <div class="border-b border-border/60 pb-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <app-icon name="phone" class="w-4 h-4 text-emerald-400" />
+          <h3 class="text-sm font-bold text-foreground">Plantillas de Notificaciones por WhatsApp</h3>
+        </div>
+        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold font-mono">WHATSAPP AUTOMATION</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Aviso al Invitado (Foto Impresa)</label>
+          <textarea
+            [formField]="settingsForm.whatsappGuestMessage"
+            rows="3"
+            class="w-full p-2.5 rounded-lg border border-border bg-card text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none font-sans"
+            placeholder="Mensaje para el invitado..."
+          ></textarea>
+          <p class="text-[10px] text-muted-foreground">Variables disponibles: <code>&#123;guest_name&#125;</code>, <code>&#123;event_name&#125;</code></p>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Aviso al Anfitrión (Álbum Completo)</label>
+          <textarea
+            [formField]="settingsForm.whatsappHostMessage"
+            rows="3"
+            class="w-full p-2.5 rounded-lg border border-border bg-card text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none font-sans"
+            placeholder="Mensaje para el anfitrión..."
+          ></textarea>
+          <p class="text-[10px] text-muted-foreground">Variables disponibles: <code>&#123;host_name&#125;</code>, <code>&#123;event_name&#125;</code>, <code>&#123;gallery_url&#125;</code></p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,130 @@
+<div class="h-full flex flex-col min-h-0 space-y-4 overflow-y-auto no-scrollbar pb-6 animate-in fade-in duration-300">
+  
+  <!-- Standardized Page Title Header -->
+  <app-page-header
+    title="Ayuda, FAQ y Soporte Comercial"
+    subtitle="Encuentra respuestas rápidas para la configuración de eventos 360°, impresoras térmicas y asistencia personalizada."
+  >
+    <ng-container actions>
+      <a
+        href="https://wa.me/525512345678?text=Hola%20Soporte%20gocam360,%20requiero%20asistencia%20en%20vivo."
+        target="_blank"
+        hlmBtn
+        size="sm"
+        class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+      >
+        <app-icon name="phone" class="w-3.5 h-3.5 text-white" />
+        <span>Soporte WhatsApp En Vivo</span>
+      </a>
+    </ng-container>
+  </app-page-header>
+
+  <!-- Tarjetas de Acceso Rápido / Contacto -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+    <div class="p-4 rounded-xl border border-border/80 bg-popover-solid space-y-2 shadow-none hover:border-primary/50 transition-all group">
+      <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+        <app-icon name="events" class="w-5 h-5" />
+      </div>
+      <h3 class="text-sm font-extrabold text-foreground">Guía Rápida de Eventos</h3>
+      <p class="text-xs text-muted-foreground leading-relaxed">Aprende a crear eventos 360°, personalizar marcas de agua PNG y generar códigos QR de acceso instantáneo.</p>
+    </div>
+
+    <div class="p-4 rounded-xl border border-border/80 bg-popover-solid space-y-2 shadow-none hover:border-amber-500/50 transition-all group">
+      <div class="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+        <app-icon name="printer" class="w-5 h-5" />
+      </div>
+      <h3 class="text-sm font-extrabold text-foreground">Hardware & Impresión Térmica</h3>
+      <p class="text-xs text-muted-foreground leading-relaxed">Conexión de impresoras térmicas DNP/Fuji por USB o cola de red y configuración de formatos de foto 10x15.</p>
+    </div>
+
+    <div class="p-4 rounded-xl border border-border/80 bg-popover-solid space-y-2 shadow-none hover:border-emerald-500/50 transition-all group">
+      <div class="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+        <app-icon name="shield" class="w-5 h-5" />
+      </div>
+      <h3 class="text-sm font-extrabold text-foreground">Seguridad & CRM Prospectos</h3>
+      <p class="text-xs text-muted-foreground leading-relaxed">Captación de números móviles con código OTP y seguimiento de clientes interesados vía WhatsApp.</p>
+    </div>
+  </div>
+
+  <!-- Categorías Pills Reutilizables -->
+  <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shrink-0">
+    <app-search-input
+      placeholder="Buscar en el centro de ayuda (ej. Impresión, QR, Eventos)..."
+      containerClass="w-full md:w-80"
+      (searchInput)="onSearchChange($event)"
+    />
+
+    <app-segmented-pills
+      [options]="categoryOptions"
+      [selectedValue]="selectedCategory()"
+      (valueChange)="selectedCategory.set($event)"
+    />
+  </div>
+
+  <!-- Lista Acordeón Interactivo de FAQ Con Animaciones Fluidas y Alineación Perfecta -->
+  <div class="rounded-xl border border-border/80 bg-popover-solid text-popover-foreground p-4 space-y-3 shadow-none flex-1">
+    <h3 class="text-sm font-extrabold text-foreground pb-2 border-b border-border/60">Preguntas Frecuentes Respondidas</h3>
+
+    <div class="space-y-2.5">
+      @for (faq of filteredFaqs(); track faq.id) {
+        <div class="border border-border/70 rounded-xl overflow-hidden bg-card/60 hover:bg-card transition-all duration-200 shadow-xs">
+          <button
+            type="button"
+            (click)="toggleFaq(faq.id)"
+            [attr.aria-expanded]="openFaqIds().includes(faq.id)"
+            [attr.aria-controls]="'faq-panel-' + faq.id"
+            [id]="'faq-header-' + faq.id"
+            class="w-full px-4 py-3.5 text-left flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors cursor-pointer group"
+          >
+            <span class="text-xs font-bold text-foreground flex items-center gap-2.5 leading-snug">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary shrink-0 transition-transform group-hover:scale-125"></span>
+              <span>{{ faq.question }}</span>
+            </span>
+            <app-icon
+              name="chevron-down"
+              class="w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-300 ease-out"
+              [class.rotate-180]="openFaqIds().includes(faq.id)"
+            />
+          </button>
+
+          <!-- Animación Fluida de Despliegue mediante CSS Grid Rows -->
+          <div
+            [id]="'faq-panel-' + faq.id"
+            role="region"
+            [attr.aria-labelledby]="'faq-header-' + faq.id"
+            class="grid transition-all duration-300 ease-in-out"
+            [class.grid-rows-[1fr]]="openFaqIds().includes(faq.id)"
+            [class.opacity-100]="openFaqIds().includes(faq.id)"
+            [class.grid-rows-[0fr]]="!openFaqIds().includes(faq.id)"
+            [class.opacity-0]="!openFaqIds().includes(faq.id)"
+          >
+            <div class="overflow-hidden">
+              <div class="px-4 py-3.5 text-xs text-muted-foreground leading-relaxed border-t border-border/40 bg-muted/20 space-y-1 pl-8">
+                <p>{{ faq.answer }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      } @empty {
+        <div class="p-10 text-center text-muted-foreground">
+          <div class="max-w-xs mx-auto space-y-2.5">
+            <app-icon name="help" class="w-8 h-8 text-muted-foreground/60 mx-auto" />
+            <h4 class="text-sm font-bold text-foreground">No encontramos esa respuesta</h4>
+            <p class="text-xs text-muted-foreground">Prueba con otra palabra clave en el buscador o contacta al soporte por WhatsApp.</p>
+            <button
+              type="button"
+              hlmBtn
+              variant="outline"
+              size="sm"
+              (click)="clearFilters()"
+              class="mt-1 font-bold cursor-pointer"
+            >
+              Ver Todas las Preguntas
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+</div>

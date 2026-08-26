@@ -1,0 +1,184 @@
+<div class="h-full flex flex-col min-h-0 space-y-4 overflow-y-auto no-scrollbar pb-6 animate-in fade-in duration-300">
+  
+  <!-- Standardized Page Title Header (Con botón de guardar arriba a la derecha) -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0">
+    <div>
+      <h2 class="text-xl font-bold tracking-tight text-foreground">Perfil de Usuario</h2>
+      <p class="text-xs text-muted-foreground mt-0.5">Gestiona tu información personal, foto de perfil (almacenada en Supabase Storage) y credenciales de acceso.</p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="onSaveProfile()"
+        [disabled]="isSavingProfile() || profileForm().invalid()"
+        class="px-4 py-2 rounded-lg bg-foreground text-background font-bold text-xs shadow-sm hover:opacity-90 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+      >
+        @if (isSavingProfile()) {
+          <app-icon name="refresh" class="w-3.5 h-3.5 animate-spin" />
+          <span>Guardando...</span>
+        } @else {
+          <app-icon name="check" class="w-3.5 h-3.5" />
+          <span>Guardar Perfil</span>
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- Tarjeta Principal de Perfil (Diseño Dark Obsidian) -->
+  <div class="p-6 rounded-xl border border-border/80 bg-popover-solid text-popover-foreground space-y-6 shadow-none">
+    
+    <!-- Input oculto para subida de avatar a Supabase Storage -->
+    <input
+      type="file"
+      #avatarInput
+      (change)="onAvatarSelected($event)"
+      accept="image/png, image/jpeg, image/jpg, image/webp"
+      class="hidden"
+    />
+
+    <!-- Header con Avatar y Rol -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+      <div class="relative group">
+        @if (user()?.avatar) {
+          <img
+            [src]="user()?.avatar"
+            [alt]="user()?.name"
+            class="w-20 h-20 rounded-full object-cover shadow-lg ring-2 ring-primary/40 border-2 border-background"
+          />
+        } @else {
+          <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-900 via-purple-900 to-slate-900 text-white flex items-center justify-center text-2xl font-black shadow-lg ring-2 ring-primary/40 font-mono">
+            {{ getInitials(user()?.name) }}
+          </div>
+        }
+
+        <button
+          type="button"
+          (click)="avatarInput.click()"
+          [disabled]="isUploadingAvatar()"
+          class="absolute bottom-0 right-0 p-2 rounded-full bg-foreground text-background border-2 border-background text-xs shadow-md cursor-pointer hover:scale-110 active:scale-95 transition-all"
+          title="Cambiar Foto de Perfil (Supabase Storage)"
+        >
+          @if (isUploadingAvatar()) {
+            <app-icon name="refresh" class="w-3.5 h-3.5 animate-spin" />
+          } @else {
+            <app-icon name="camera" class="w-3.5 h-3.5" />
+          }
+        </button>
+      </div>
+
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-2">
+          <h3 class="text-lg font-bold text-foreground leading-tight">{{ user()?.name }}</h3>
+          <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-primary/10 text-primary border border-primary/20">
+            SUPABASE STORAGE
+          </span>
+        </div>
+        <p class="text-xs text-muted-foreground font-mono">{{ user()?.email }}</p>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="px-2.5 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold font-mono">
+            Rol: {{ userRole() === 'SUPERADMIN' ? 'SÚPER ADMINISTRADOR' : 'ADMINISTRADOR OPERADOR' }}
+          </span>
+          <span class="px-2 py-0.5 rounded border border-border text-muted-foreground text-[10px] font-mono">
+            ID: {{ user()?.id ? (user()?.id | slice:0:8) + '...' : 'Global' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 1: Formulario de Información General -->
+    <form (submit)="onSaveProfile(); $event.preventDefault()" class="space-y-4 pt-4 border-t border-border/40">
+      <div class="flex items-center justify-between border-b border-border/40 pb-1.5">
+        <h4 class="text-xs font-bold text-foreground">Información Personal & Cuenta</h4>
+        <span class="text-[10px] text-muted-foreground font-mono">SUPABASE AUTH</span>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Nombre Completo *</label>
+          <input type="text" hlmInput [formField]="profileForm.name" placeholder="Ej. Hugo Mendoza" class="h-9 rounded-md text-xs w-full" />
+          @if (profileForm.name().touched() && profileForm.name().errors().length) {
+            <p class="text-[10px] text-rose-500 font-medium">{{ profileForm.name().errors()[0].message }}</p>
+          }
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Correo Electrónico (Lectura)</label>
+          <input type="email" [value]="user()?.email" disabled class="h-9 px-3 rounded-md border border-border/80 bg-muted/40 text-muted-foreground text-xs font-mono w-full cursor-not-allowed" />
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Identificador Único (UUID)</label>
+          <div class="flex items-center gap-1.5">
+            <input type="text" [value]="user()?.id" disabled class="h-9 px-3 rounded-md border border-border/80 bg-muted/40 text-muted-foreground text-xs font-mono w-full cursor-not-allowed" />
+            <button
+              type="button"
+              (click)="copyToClipboard(user()?.id)"
+              class="h-9 px-3 rounded-md border border-border bg-card hover:bg-muted font-bold text-xs flex items-center gap-1 cursor-pointer transition-all active:scale-95 text-foreground shrink-0"
+              title="Copiar ID"
+            >
+              <app-icon name="copy" class="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Estado de Acceso</label>
+          <div class="h-9 px-3 rounded-md border border-border/60 bg-muted/20 flex items-center justify-between">
+            <span class="text-xs font-semibold text-foreground">Cuenta Activa</span>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold font-mono">● OPERATIVO</span>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <!-- SECCIÓN 2: Formulario de Seguridad y Cambio de Contraseña -->
+    <form (submit)="onUpdatePassword(); $event.preventDefault()" class="space-y-4 pt-4 border-t border-border/40">
+      <h4 class="text-xs font-bold text-foreground border-b border-border/40 pb-1">Seguridad y Cambio de Contraseña</h4>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Contraseña Actual *</label>
+          <input type="password" hlmInput [formField]="passwordForm.currentPassword" placeholder="••••••••" class="h-9 rounded-md text-xs w-full" />
+          @if (passwordForm.currentPassword().touched() && passwordForm.currentPassword().errors().length) {
+            <p class="text-[10px] text-rose-500 font-medium">{{ passwordForm.currentPassword().errors()[0].message }}</p>
+          }
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Nueva Contraseña *</label>
+          <input type="password" hlmInput [formField]="passwordForm.newPassword" placeholder="Mínimo 6 caracteres" class="h-9 rounded-md text-xs w-full" />
+          @if (passwordForm.newPassword().touched() && passwordForm.newPassword().errors().length) {
+            <p class="text-[10px] text-rose-500 font-medium">{{ passwordForm.newPassword().errors()[0].message }}</p>
+          }
+        </div>
+
+        <div class="space-y-1">
+          <label class="font-bold text-foreground">Confirmar Nueva Contraseña *</label>
+          <input type="password" hlmInput [formField]="passwordForm.confirmPassword" placeholder="Repite contraseña" class="h-9 rounded-md text-xs w-full" />
+          @if (passwordMismatch()) {
+            <p class="text-[10px] text-rose-500 font-medium">Las contraseñas no coinciden.</p>
+          }
+        </div>
+      </div>
+
+      <div class="pt-2 flex justify-end">
+        <button
+          type="submit"
+          [disabled]="isSavingPassword() || passwordForm().invalid() || passwordMismatch()"
+          class="px-4 py-2 rounded-lg border border-border bg-muted hover:bg-card text-foreground font-bold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+        >
+          @if (isSavingPassword()) {
+            <app-icon name="refresh" class="w-3.5 h-3.5 animate-spin" />
+            <span>Actualizando...</span>
+          } @else {
+            <app-icon name="check" class="w-3.5 h-3.5 text-emerald-400" />
+            <span>Actualizar Contraseña</span>
+          }
+        </button>
+      </div>
+    </form>
+
+  </div>
+
+</div>

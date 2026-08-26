@@ -1,0 +1,677 @@
+<div class="min-h-screen bg-slate-950 text-white flex items-center justify-center p-2 sm:p-4 font-sans select-none relative overflow-hidden">
+  
+  <!-- Fondo Ambiental Inmersivo de la Portada del Evento -->
+  @if (eventData()?.coverImage) {
+    <img [src]="eventData()?.coverImage" class="absolute inset-0 w-full h-full object-cover opacity-35 filter blur-3xl scale-125 z-0 pointer-events-none" />
+    <div class="absolute inset-0 bg-gradient-to-b from-slate-950/80 via-slate-950/90 to-slate-950 z-0"></div>
+  } @else {
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl z-0 pointer-events-none"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl z-0 pointer-events-none"></div>
+  }
+
+  <!-- Contenedor Frame Móvil (Swiss Dark Glassmorphism 100% VIP) -->
+  <div class="w-full max-w-[420px] bg-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl shadow-purple-950/50 overflow-hidden relative min-h-[720px] flex flex-col border border-white/15 transition-all duration-500 z-10">
+
+    <!-- Notch Superior Simulado del Smartphone -->
+    <div class="h-6 w-full flex justify-center pt-2 absolute top-0 z-50 pointer-events-none">
+      <div class="w-16 h-1.5 bg-white/20 rounded-full"></div>
+    </div>
+
+    <!-- ==================== PASO 1: CÓDIGO ÚNICO DE EVENTO ==================== -->
+    @if (currentStep() === 'STEP_1_CODE') {
+      <div class="flex-1 flex flex-col p-6 sm:p-8 pt-14 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+        <div class="flex-1 flex flex-col justify-center space-y-6">
+          
+          <!-- Brand Icon Header -->
+          <div class="text-center space-y-2">
+            <div class="w-16 h-16 bg-gradient-to-tr from-purple-600 to-indigo-500 text-white font-black text-3xl rounded-2xl flex items-center justify-center mx-auto shadow-2xl shadow-purple-500/30 tracking-tighter border border-white/20">
+              g
+            </div>
+            <h1 class="text-2xl font-black tracking-tight text-white">gocam360</h1>
+            <p class="text-xs text-white/70 leading-relaxed px-2 font-medium">
+              Conéctate a la experiencia 360° en vivo e imprime tus mejores fotografías al instante.
+            </p>
+          </div>
+
+          <!-- Formulario de Código del Evento -->
+          <form (submit)="validateEventCode(); $event.preventDefault()" class="space-y-5 pt-2">
+            
+            <div class="space-y-2">
+              <label class="text-[11px] font-extrabold text-white/80 uppercase tracking-widest text-center block">
+                CÓDIGO ÚNICO DEL EVENTO
+              </label>
+              
+              <div class="relative">
+                <input
+                  type="text"
+                  [value]="displayEventCode()"
+                  (input)="onManualCodeInput($event)"
+                  placeholder="BODA-FAAC"
+                  class="w-full h-14 bg-slate-800/60 border-2 border-white/15 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 rounded-2xl px-4 font-mono font-black text-white text-center uppercase tracking-widest text-lg focus:outline-none transition-all shadow-inner placeholder:text-white/20"
+                />
+                @if (isAutoTyping()) {
+                  <span class="absolute right-3.5 top-4.5 flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                }
+              </div>
+
+              @if (isAutoTyping()) {
+                <p class="text-[10px] text-emerald-400 font-mono text-center animate-pulse">⚡ Código escaneado por QR autocompletado...</p>
+              } @else {
+                <p class="text-[10px] text-white/50 text-center">Ingresa el código proporcionado por el organizador del evento.</p>
+              }
+            </div>
+
+            <!-- Botón Validar Código -->
+            <div class="pt-2">
+              <button
+                type="submit"
+                [disabled]="!displayEventCode() || isValidatingCode()"
+                class="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-xs shadow-lg shadow-purple-600/30 transition-all duration-300 active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border border-white/10"
+              >
+                @if (isValidatingCode()) {
+                  <app-icon name="refresh" class="w-4 h-4 animate-spin text-white" />
+                  <span>Verificando Evento...</span>
+                } @else {
+                  <span>Continuar →</span>
+                }
+              </button>
+            </div>
+
+          </form>
+
+        </div>
+
+      </div>
+    }
+
+    <!-- ==================== PASO 2: REGISTRO DE INVITADO CON BRANDING VIP DEL EVENTO ==================== -->
+    @else if (currentStep() === 'STEP_2_GUEST_INFO') {
+      <div class="flex-1 flex flex-col p-5 pt-9 animate-in fade-in slide-in-from-bottom-6 duration-500">
+        
+        <!-- Header Inmersivo con Portada HD, Logo Glowing & Descripción -->
+        <div class="relative h-56 rounded-3xl overflow-hidden shadow-2xl border border-white/20 mb-4 bg-gradient-to-br from-indigo-950 via-slate-950 to-purple-950 flex flex-col justify-end p-4">
+          @if (eventData()?.coverImage) {
+            <img [src]="eventData()?.coverImage" [alt]="eventData()?.name" class="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-700 hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-purple-950/40 z-0"></div>
+          } @else {
+            <div class="absolute inset-0 bg-gradient-to-tr from-purple-900/80 via-indigo-950 to-slate-950 z-0"></div>
+          }
+
+          <div class="relative z-10 text-center space-y-2">
+            <!-- Logo del Evento u Organizador con Glow -->
+            <div class="w-16 h-16 rounded-2xl bg-white/95 border-2 border-white/30 p-1 shadow-2xl shadow-purple-500/30 mx-auto flex items-center justify-center overflow-hidden transition-transform duration-300 hover:scale-105">
+              @if (eventData()?.logoUrl) {
+                <img [src]="eventData()?.logoUrl" [alt]="eventData()?.name" class="max-w-full max-h-full object-contain" />
+              } @else {
+                <div class="w-full h-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-black text-2xl flex items-center justify-center">
+                  {{ eventData()?.name?.substring(0, 1) || 'G' }}
+                </div>
+              }
+            </div>
+
+            <!-- Título del Evento -->
+            <h2 class="text-xl font-black text-white drop-shadow-md text-center tracking-tight leading-snug">
+              {{ eventData()?.name || 'Bienvenido al Evento' }}
+            </h2>
+
+            <!-- Descripción del Evento -->
+            @if (eventData()?.description) {
+              <p class="text-xs text-white/80 text-center line-clamp-2 px-2 leading-relaxed drop-shadow-sm font-medium">
+                {{ eventData()?.description }}
+              </p>
+            }
+
+            <!-- Badges EN VIVO & CÓDIGO -->
+            <div class="flex items-center justify-center gap-2 pt-0.5">
+              <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/30 flex items-center gap-1.5 backdrop-blur-md shadow-xs">
+                <span class="relative flex h-1.5 w-1.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                </span>
+                EN VIVO
+              </span>
+
+              <span class="px-2.5 py-0.5 rounded-full bg-white/10 text-white/90 text-[10px] font-mono font-bold border border-white/20 backdrop-blur-md shadow-xs">
+                CÓDIGO: {{ displayEventCode() }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario de Registro de Invitado Glassmorphism -->
+        <form (submit)="onGuestRegisterSubmit(); $event.preventDefault()" class="space-y-3 flex-1 flex flex-col justify-between">
+          
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-white/80 uppercase tracking-widest block">
+                COMPLETA TUS DATOS
+              </span>
+              <button
+                type="button"
+                (click)="currentStep.set('STEP_1_CODE')"
+                class="text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <span>← Cambiar Código</span>
+              </button>
+            </div>
+
+            <!-- Tu Nombre Completo -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-white/70 block">
+                Tu Nombre Completo *
+              </label>
+              <input
+                type="text"
+                [value]="guestName()"
+                (input)="guestName.set($any($event.target).value)"
+                placeholder="Ej. Camila Moya"
+                class="w-full h-11 bg-slate-800/60 border border-white/15 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 rounded-xl px-3.5 text-xs text-white focus:outline-none transition-all placeholder:text-white/30"
+              />
+            </div>
+
+            <!-- Teléfono de WhatsApp con Prefijo de Bolivia +591 -->
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-white/70 block">
+                Teléfono (WhatsApp para Aviso) *
+              </label>
+              <div class="flex items-center gap-1.5 border border-white/15 rounded-xl bg-slate-800/60 overflow-hidden focus-within:border-purple-500 focus-within:ring-2 focus-within:ring-purple-500/20 transition-all">
+                <span class="px-3.5 py-3 text-xs font-mono font-bold text-emerald-400 bg-slate-900/80 border-r border-white/10 flex items-center gap-1.5 shrink-0">
+                  <span>🇧🇴</span>
+                  <span>+591</span>
+                </span>
+                <input
+                  type="tel"
+                  [value]="guestPhone()"
+                  (input)="guestPhone.set($any($event.target).value)"
+                  placeholder="71234567"
+                  class="flex-1 h-11 bg-transparent px-3 text-xs text-white focus:outline-none font-mono placeholder:text-white/30"
+                />
+              </div>
+              <p class="text-[10px] text-white/40">Te enviaremos una notificación cuando tus fotos estén listas.</p>
+            </div>
+          </div>
+
+          <!-- Botón Conectarse al Evento VIP -->
+          <div class="pt-2">
+            <button
+              type="submit"
+              [disabled]="!guestName() || !guestPhone() || isSubmitting()"
+              class="w-full h-12 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-xs shadow-lg shadow-purple-600/30 transition-all duration-300 active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer border border-white/10"
+            >
+              @if (isSubmitting()) {
+                <app-icon name="refresh" class="w-4 h-4 animate-spin text-white" />
+                <span>Conectando con el Evento...</span>
+              } @else {
+                <span>Entrar al Evento →</span>
+              }
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    }
+
+    <!-- ==================== PASO 2: LOADER BIENVENIDA AL EVENTO ==================== -->
+    @else if (currentStep() === 'LOADING_EVENT') {
+      <div class="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+        <div class="relative">
+          <div class="w-20 h-20 rounded-full border-4 border-muted border-t-primary animate-spin"></div>
+          <div class="absolute inset-0 flex items-center justify-center text-xl">
+            🎪
+          </div>
+        </div>
+        
+        <div class="space-y-2">
+          <span class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-extrabold font-mono uppercase tracking-widest">
+            VERIFICANDO CÓDIGO {{ displayEventCode() }}
+          </span>
+          <h2 class="text-2xl font-black text-foreground tracking-tight">¡Bienvenido(a), {{ guestName() }}!</h2>
+          <p class="text-xs text-muted-foreground max-w-xs leading-relaxed">
+            Cargando los marcos decorativos y configuraciones en vivo para <span class="font-bold text-foreground">{{ eventData()?.name || 'tu evento' }}</span>...
+          </p>
+        </div>
+      </div>
+    }
+
+    <!-- ==================== PASO 3: BIENVENIDA Y OPCIONES DE CAPTURA ==================== -->
+    @else if (currentStep() === 'WELCOME') {
+      <div class="flex-1 flex flex-col p-5 pt-8 bg-slate-950 text-white animate-in slide-in-from-right-4 duration-300 overflow-y-auto no-scrollbar pb-6">
+
+        <!-- 1. VIP HERO CARD CON PORTADA HD Y LOGO DEL EVENTO -->
+        <div class="relative h-44 rounded-3xl overflow-hidden shadow-2xl border border-white/20 mb-3 bg-gradient-to-br from-indigo-950 via-slate-950 to-purple-950 flex flex-col justify-end p-4 shrink-0 group">
+          @if (eventData()?.coverImage) {
+            <img [src]="eventData()?.coverImage" [alt]="eventData()?.name" class="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-700 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent z-0"></div>
+          } @else {
+            <div class="absolute inset-0 bg-gradient-to-tr from-purple-900/80 via-indigo-950 to-slate-950 z-0"></div>
+          }
+
+          <div class="relative z-10 flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-white/95 border-2 border-white/30 p-1 shadow-2xl shadow-purple-500/30 flex items-center justify-center overflow-hidden shrink-0">
+              @if (eventData()?.logoUrl) {
+                <img [src]="eventData()?.logoUrl" [alt]="eventData()?.name" class="max-w-full max-h-full object-contain" />
+              } @else {
+                <div class="w-full h-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-black text-lg flex items-center justify-center">
+                  {{ eventData()?.name?.substring(0, 1) || 'G' }}
+                </div>
+              }
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-mono font-bold border border-emerald-500/30 flex items-center gap-1 backdrop-blur-md">
+                  <span class="relative flex h-1.5 w-1.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                  </span>
+                  EN VIVO
+                </span>
+                <span class="px-2 py-0.5 rounded-full bg-white/10 text-white/90 text-[9px] font-mono font-bold border border-white/20 backdrop-blur-md">
+                  {{ displayEventCode() }}
+                </span>
+              </div>
+              <h3 class="text-sm font-black text-white truncate drop-shadow-md mt-1">
+                {{ eventData()?.name || 'Evento 360°' }}
+              </h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. SALUDO PERSONALIZADO -->
+        <div class="text-center mb-3 space-y-0.5">
+          <h2 class="text-xl font-black text-white tracking-tight">
+            ¡Hola, {{ guestName() }}! 👋
+          </h2>
+          <p class="text-xs text-white/70 px-2 leading-relaxed">
+            Captura tus momentos 360°, guárdalos en la nube o imprímelos en papel térmico.
+          </p>
+        </div>
+
+        <!-- 3. MINI PANEL DE CUOTAS VISUALES -->
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div class="p-2.5 rounded-2xl bg-slate-900/90 border border-purple-500/30 flex items-center gap-2.5 shadow-sm">
+            <div class="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center font-bold text-sm shrink-0">
+              📸
+            </div>
+            <div class="text-left">
+              <span class="text-[10px] text-white/60 block leading-tight font-medium">Fotos Libres</span>
+              <span class="text-xs font-black text-purple-300 font-mono">{{ remainingPhotos() }} restantes</span>
+            </div>
+          </div>
+
+          <div class="p-2.5 rounded-2xl bg-slate-900/90 border border-emerald-500/30 flex items-center gap-2.5 shadow-sm">
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">
+              🖨️
+            </div>
+            <div class="text-left">
+              <span class="text-[10px] text-white/60 block leading-tight font-medium">Impresiones</span>
+              <span class="text-xs font-black text-emerald-400 font-mono">{{ remainingPrints() }} disponibles</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. BOTONES DE ACCIÓN DE CAPTURA & GALERÍA -->
+        <div class="grid grid-cols-1 gap-2.5 mb-3">
+          <input #cameraInput type="file" accept="image/*" capture="environment" class="hidden" (change)="onFileSelected($event)" />
+          <input #galleryInput type="file" accept="image/*" class="hidden" (change)="onFileSelected($event)" />
+
+          <!-- Tomar Foto 360° (Botón Primario) -->
+          <button
+            type="button"
+            (click)="cameraInput.click()"
+            class="w-full h-14 bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 text-white rounded-2xl flex items-center p-3 transition-all shadow-xl shadow-purple-600/25 hover:scale-[1.01] active:scale-[0.98] cursor-pointer group border border-white/10"
+          >
+            <div class="h-9 w-9 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform backdrop-blur-md shrink-0">
+              <app-icon name="camera" class="w-5 h-5 text-white" />
+            </div>
+            <div class="ml-3 text-left">
+              <div class="font-black text-sm leading-tight">Tomar Foto 360°</div>
+              <div class="text-[10px] text-white/80 font-medium">Usar la cámara de tu celular ahora</div>
+            </div>
+          </button>
+
+          <!-- Subir de Galería del Celular -->
+          <button
+            type="button"
+            (click)="galleryInput.click()"
+            class="w-full h-12 bg-slate-900 border border-white/15 hover:border-purple-500 text-white rounded-2xl flex items-center p-3 transition-all active:scale-[0.98] cursor-pointer group"
+          >
+            <div class="h-7 w-7 bg-slate-800 rounded-lg text-white flex items-center justify-center group-hover:scale-110 transition-all shrink-0">
+              <app-icon name="grid" class="w-4 h-4 text-white" />
+            </div>
+            <div class="ml-3 text-left">
+              <div class="font-bold text-xs leading-tight">Subir de Galería</div>
+              <div class="text-[10px] text-white/60">Elegir foto existente de tu dispositivo</div>
+            </div>
+          </button>
+
+          <!-- Ver Muro en Vivo & Galería de la Fiesta -->
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              (click)="openLiveWallFromGuest()"
+              class="w-full h-12 bg-slate-900 border border-indigo-500/30 hover:border-indigo-500 text-white rounded-2xl flex items-center px-3 gap-2 transition-all active:scale-[0.98] cursor-pointer group"
+            >
+              <span class="text-base">📺</span>
+              <div class="text-left min-w-0">
+                <div class="font-bold text-xs text-indigo-300 truncate">Muro en Vivo</div>
+                <div class="text-[9px] text-white/60">Proyector</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              (click)="openGalleryFromGuest()"
+              class="w-full h-12 bg-slate-900 border border-pink-500/30 hover:border-pink-500 text-white rounded-2xl flex items-center px-3 gap-2 transition-all active:scale-[0.98] cursor-pointer group"
+            >
+              <span class="text-base">✨</span>
+              <div class="text-left min-w-0">
+                <div class="font-bold text-xs text-pink-300 truncate">Álbum del Evento</div>
+                <div class="text-[9px] text-white/60">Ver todas</div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Mis Fotos Subidas (Galería Personal del Invitado) -->
+          <button
+            type="button"
+            (click)="openMyPhotos()"
+            class="w-full h-12 bg-slate-900/90 border border-purple-500/30 hover:border-purple-500 text-white rounded-2xl flex items-center justify-between px-3.5 transition-all active:scale-[0.98] cursor-pointer group shadow-sm"
+          >
+            <div class="flex items-center gap-2.5">
+              <span class="text-base">🖼️</span>
+              <div class="text-left">
+                <span class="font-bold text-white text-xs leading-tight block">Mis Fotos ({{ photosUploaded() }} subidas)</span>
+                <span class="text-[10px] text-white/60">Elegir cuál imprimir</span>
+              </div>
+            </div>
+            <span class="text-xs text-purple-400 font-bold">Ver Mis Fotos →</span>
+          </button>
+        </div>
+
+        <!-- 5. BANNER SUTIL DE CAPTURA DE LEADS (CRM) -->
+        <div class="mt-auto pt-2 border-t border-white/10 text-center">
+          <button
+            type="button"
+            (click)="sendCrmQuote()"
+            [disabled]="isCrmSubmitted()"
+            class="w-full p-2.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 text-purple-300 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+          >
+            @if (isCrmSubmitted()) {
+              <span>✅ ¡Solicitud enviada! Nos comunicaremos por WhatsApp</span>
+            } @else {
+              <span>✨ ¿Quieres este Photo Booth 360° en tu fiesta?</span>
+              <span class="text-white underline">Cotizar</span>
+            }
+          </button>
+        </div>
+
+      </div>
+    }
+
+    <!-- ==================== PASO 4: SELECCIÓN DE MARCO Y PREVIEW (CON CONFIRMACIÓN ACEPTAR/RECHAZAR) ==================== -->
+    @else if (currentStep() === 'FRAME') {
+      <div class="flex-1 flex flex-col bg-slate-950 text-white animate-in slide-in-from-right-4 duration-300">
+
+        <!-- Navbar Top Back -->
+        <div class="flex items-center justify-between p-4 pt-10 border-b border-white/10">
+          <button
+            type="button"
+            (click)="discardPhoto()"
+            class="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors cursor-pointer text-white/80"
+          >
+            <app-icon name="chevron-right" class="w-4 h-4 rotate-180 text-white" />
+          </button>
+          <span class="text-xs font-extrabold text-white">Personalizar Foto con Marco</span>
+          <div class="w-8"></div>
+        </div>
+
+        <!-- Preview Foto con Marco Superpuesto -->
+        <div class="flex-1 flex items-center justify-center p-5 overflow-hidden">
+          <div class="relative w-full aspect-[3/4] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-white/15">
+            <img [src]="selectedPhotoUrl()" class="w-full h-full object-cover" alt="Tu foto capturada" />
+            @if (selectedOverlayUrl()) {
+              <img [src]="selectedOverlayUrl()" class="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none" alt="Marco PNG" />
+            }
+          </div>
+        </div>
+
+        <!-- Bottom Sheet de Marcos & Botones Aceptar / Rechazar -->
+        <div class="bg-slate-900 rounded-t-[2rem] p-5 pb-6 flex flex-col gap-4 border-t border-white/15">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-xs font-bold text-white">Personalizar con Marco (Opcional)</h3>
+              <p class="text-[11px] text-white/60">Selecciona un diseño o déjala en su versión original</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono font-bold border border-purple-500/30">
+              {{ detectedOrientation() === 'LANDSCAPE' ? '🖥️ Horizontal' : detectedOrientation() === 'PORTRAIT' ? '📱 Vertical' : '⏹️ Cuadrado' }}
+            </span>
+          </div>
+
+          <div class="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+            <!-- Opción 1: Sin Marco / Foto Original -->
+            <button
+              type="button"
+              (click)="selectedFrameId.set(null)"
+              class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+            >
+              <div
+                class="w-16 h-20 rounded-xl border-2 transition-all p-1 flex flex-col items-center justify-center bg-slate-800/80 overflow-hidden text-center"
+                [class.border-purple-500]="selectedFrameId() === null"
+                [class.border-white/10]="selectedFrameId() !== null"
+              >
+                <span class="text-xl">🚫</span>
+                <span class="text-[9px] font-black text-white/90 leading-none mt-1">Sin Marco</span>
+              </div>
+              <span class="text-[9px] text-white/70 max-w-[4.5rem] truncate text-center">Original</span>
+            </button>
+
+            <!-- Marcos Compatibles -->
+            @for (frame of compatibleFrames(); track frame.id) {
+              <button
+                type="button"
+                (click)="selectedFrameId.set(frame.id)"
+                class="flex flex-col items-center gap-1.5 shrink-0 cursor-pointer group"
+              >
+                <div
+                  class="w-16 h-20 rounded-xl border-2 transition-all p-1 flex items-center justify-center bg-slate-800/80 overflow-hidden"
+                  [class.border-purple-500]="selectedFrameId() === frame.id"
+                  [class.border-white/10]="selectedFrameId() !== frame.id"
+                >
+                  @if (frame.previewUrl) {
+                    <img [src]="frame.previewUrl" [alt]="frame.name" class="w-full h-full object-contain rounded-lg bg-black/30" />
+                  } @else {
+                    <span class="text-[10px] font-bold text-center text-white font-mono">{{ frame.name }}</span>
+                  }
+                </div>
+                <span class="text-[9px] text-white/70 max-w-[4.5rem] truncate text-center">{{ frame.name }}</span>
+              </button>
+            }
+          </div>
+
+          <!-- Botones de Acción DESACOPLADOS: Solo Guardar vs Guardar e Imprimir -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <!-- 🖼️ Guardar en Galería Digital -->
+            <button
+              type="button"
+              (click)="savePhotoDigitalOnly()"
+              [disabled]="isUploading() || remainingPhotos() <= 0"
+              class="h-11 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-[11px] border border-purple-500/30 transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 disabled:opacity-40"
+            >
+              <span>🖼️ Solo Guardar</span>
+            </button>
+
+            <!-- 🖨️ Guardar e Imprimir en Papel -->
+            <button
+              type="button"
+              (click)="sendToPrintQueue()"
+              [disabled]="isUploading() || remainingPhotos() <= 0 || remainingPrints() <= 0"
+              class="h-11 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-black text-[11px] shadow-lg shadow-purple-600/30 transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-1 cursor-pointer border border-white/10"
+            >
+              @if (isUploading()) {
+                <app-icon name="refresh" class="w-4 h-4 animate-spin text-white" />
+                <span>Enviando...</span>
+              } @else {
+                <span>Guardar e Imprimir 🖨️</span>
+              }
+            </button>
+          </div>
+        </div>
+
+      </div>
+    }
+
+    <!-- ==================== PASO 4.5: MIS FOTOS SUBIDAS (GALERÍA DE SELECCIÓN DE IMPRESIÓN) ==================== -->
+    @else if (currentStep() === 'MY_PHOTOS') {
+      <div class="flex-1 flex flex-col bg-slate-950 text-white animate-in slide-in-from-right-4 duration-300">
+        
+        <!-- Navbar Top Back -->
+        <div class="flex items-center justify-between p-4 pt-10 border-b border-white/10">
+          <button
+            type="button"
+            (click)="currentStep.set('WELCOME')"
+            class="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors cursor-pointer text-white/80"
+          >
+            <app-icon name="chevron-right" class="w-4 h-4 rotate-180 text-white" />
+          </button>
+          <span class="text-xs font-extrabold text-white">Mis Fotos Subidas</span>
+          <div class="w-8"></div>
+        </div>
+
+        <div class="p-4 space-y-3 flex-1 flex flex-col overflow-y-auto no-scrollbar">
+          <!-- Banner Cuota de Impresiones -->
+          <div class="p-3.5 rounded-2xl bg-gradient-to-r from-purple-900/60 to-indigo-900/60 border border-purple-500/30 flex items-center justify-between shadow-md">
+            <div>
+              <span class="text-[10px] text-purple-300 font-bold uppercase tracking-wider block">CUOTA DE IMPRESIÓN</span>
+              <p class="text-xs font-black text-white mt-0.5">Te quedan <span class="text-emerald-400 font-mono">{{ remainingPrints() }}</span> impresiones en papel</p>
+            </div>
+            <div class="text-xl">🖨️</div>
+          </div>
+
+          <!-- Listado de Fotos del Invitado en Grid Responsivo -->
+          @if (isLoadingMyPhotos()) {
+            <div class="flex-1 flex items-center justify-center p-8 text-center">
+              <app-icon name="refresh" class="w-6 h-6 animate-spin text-purple-400" />
+            </div>
+          } @else {
+            <div class="grid grid-cols-2 gap-3 pb-4">
+              @for (photo of myPhotosList(); track photo.id) {
+                <div class="relative aspect-square rounded-2xl overflow-hidden bg-slate-900 border border-white/15 shadow-md flex flex-col justify-end p-2 group">
+                  <img [src]="photo.storagePath" [alt]="photo.id" class="absolute inset-0 w-full h-full object-cover" />
+                  <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent"></div>
+
+                  <div class="relative z-10 space-y-1.5 w-full">
+                    @if (photo.isPrinted) {
+                      <span class="w-full py-1 rounded-xl bg-emerald-500/90 text-white font-black text-[9px] uppercase tracking-wider text-center block shadow-xs backdrop-blur-md">
+                        ✓ Impreso en Papel
+                      </span>
+                    } @else if (photo.isPendingPrint || photo.hasPrintRequest) {
+                      <span class="w-full py-1 rounded-xl bg-amber-500/90 text-slate-950 font-black text-[9px] uppercase tracking-wider text-center block shadow-xs backdrop-blur-md">
+                        ⏳ En Impresora
+                      </span>
+                    } @else {
+                      <button
+                        type="button"
+                        (click)="requestPrintForExistingPhoto(photo.id)"
+                        [disabled]="remainingPrints() <= 0 || requestingPrintPhotoId() === photo.id"
+                        class="w-full py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black text-[10px] uppercase tracking-wider text-center shadow-lg transition-transform active:scale-95 disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1"
+                      >
+                        @if (requestingPrintPhotoId() === photo.id) {
+                          <app-icon name="refresh" class="w-3 h-3 animate-spin text-slate-950" />
+                          <span>Enviando...</span>
+                        } @else {
+                          <span>🖨️ Imprimir Esta</span>
+                        }
+                      </button>
+                    }
+                  </div>
+                </div>
+              } @empty {
+                <div class="col-span-2 p-8 text-center text-xs text-white/60 space-y-2">
+                  <div class="text-3xl">📷</div>
+                  <p>Aún no has subido fotografías en este evento.</p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      </div>
+    }
+
+    <!-- ==================== PASO 5: ÉXITO Y CAPTURA CRM ==================== -->
+    @else if (currentStep() === 'SUCCESS') {
+      <div class="flex-1 flex flex-col p-6 bg-slate-950 text-white animate-in zoom-in-95 duration-500 pt-14 justify-between">
+        
+        <div class="flex-1 flex flex-col items-center justify-center text-center space-y-4">
+          <div class="relative">
+            <div class="w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shadow-xl shadow-emerald-500/20 text-3xl border border-emerald-500/30">
+              ✓
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <h2 class="text-2xl font-extrabold text-white tracking-tight">¡Fotografía Enviada!</h2>
+            <p class="text-xs text-white/70 max-w-[260px] leading-relaxed font-medium">
+              Tu foto ha ingresado a la cola de la estación de impresión física. Te avisaremos por WhatsApp cuando esté lista.
+            </p>
+          </div>
+
+          <!-- Badges de Cuota Restante -->
+          <div class="flex items-center justify-center gap-2 pt-2">
+            <span class="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono font-extrabold border border-purple-500/30">
+              📸 Quedan {{ remainingPhotos() }} fotos
+            </span>
+            <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-extrabold border border-emerald-500/30">
+              🖨️ {{ remainingPrints() }} impresión restante
+            </span>
+          </div>
+
+          <button
+            type="button"
+            (click)="takeAnotherPhoto()"
+            [disabled]="remainingPhotos() <= 0 || remainingPrints() <= 0"
+            class="px-4 py-2.5 rounded-xl border border-white/20 bg-slate-900 hover:bg-slate-800 font-bold text-xs text-white transition-all active:scale-95 cursor-pointer disabled:opacity-40"
+          >
+            📷 Tomar otra fotografía
+          </button>
+        </div>
+
+        <!-- Tarjeta CRM Lead Magnet -->
+        <div class="bg-slate-900/90 text-white p-4 rounded-2xl border border-white/15 space-y-3 shadow-xl backdrop-blur-md">
+          <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0 border border-white/20">
+              🚀
+            </div>
+            <div>
+              <span class="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">POWERED BY GOCAM360</span>
+              <p class="text-xs text-white font-semibold">¿Te gustó la experiencia? Llévala a tu propio evento.</p>
+            </div>
+          </div>
+
+          @if (isCrmSubmitted()) {
+            <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold text-center">
+              ✓ ¡Gracias! Te enviamos la información por WhatsApp.
+            </div>
+          } @else {
+            <button
+              type="button"
+              (click)="sendCrmQuote()"
+              class="w-full h-10 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 text-white font-bold text-xs shadow-md hover:opacity-90 transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer border border-white/10"
+            >
+              <span>Quiero Cotizar Mi Evento →</span>
+            </button>
+          }
+        </div>
+
+      </div>
+    }
+
+  </div>
+
+</div>
